@@ -1,0 +1,17 @@
+import express from 'express';
+import { getOrders, createOrder, getOrderById, updateOrderStatus, cancelOrder } from '../controllers/orderController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
+
+const router = express.Router();
+
+router.route('/')
+    .get(protect, authorize('admin', 'manager', 'waiter', 'chef'), getOrders)
+    .post(protect, authorize('admin', 'manager', 'waiter'), createOrder);
+
+router.route('/:id')
+    .get(protect, authorize('admin', 'manager', 'waiter', 'chef'), getOrderById);
+
+router.put('/:id/status', protect, authorize('admin', 'manager', 'waiter', 'chef'), updateOrderStatus);
+router.put('/:id/cancel', protect, authorize('admin', 'manager', 'waiter'), cancelOrder);
+
+export default router;
