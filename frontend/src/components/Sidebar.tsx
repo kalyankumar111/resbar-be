@@ -39,6 +39,12 @@ const navItems: NavItem[] = [
         roles: ['admin', 'superadmin'],
     },
     {
+        title: 'Table Editor',
+        href: '/admin/tables',
+        icon: LayoutDashboard,
+        roles: ['admin', 'superadmin'],
+    },
+    {
         title: 'Menu Editor',
         href: '/admin/menu',
         icon: UtensilsCrossed,

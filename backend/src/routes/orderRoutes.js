@@ -5,13 +5,13 @@ import { protect, authorize } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.route('/')
-    .get(protect, authorize('admin', 'manager', 'waiter', 'chef'), getOrders)
-    .post(protect, authorize('admin', 'manager', 'waiter'), createOrder);
+    .get(protect, authorize('admin', 'superadmin', 'manager', 'waiter', 'chef'), getOrders)
+    .post(protect, authorize('admin', 'superadmin', 'manager', 'waiter'), createOrder);
 
 router.route('/:id')
-    .get(protect, authorize('admin', 'manager', 'waiter', 'chef'), getOrderById);
+    .get(protect, authorize('admin', 'superadmin', 'manager', 'waiter', 'chef'), getOrderById);
 
-router.put('/:id/status', protect, authorize('admin', 'manager', 'waiter', 'chef'), updateOrderStatus);
-router.put('/:id/cancel', protect, authorize('admin', 'manager', 'waiter'), cancelOrder);
+router.put('/:id/status', protect, authorize('admin', 'superadmin', 'manager', 'waiter', 'chef'), updateOrderStatus);
+router.put('/:id/cancel', protect, authorize('admin', 'superadmin', 'manager', 'waiter'), cancelOrder);
 
 export default router;

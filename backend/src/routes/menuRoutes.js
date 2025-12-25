@@ -10,21 +10,21 @@ const router = express.Router();
 // Categories
 router.route('/categories')
     .get(getCategories)
-    .post(protect, authorize('admin', 'manager'), createCategory);
+    .post(protect, authorize('admin', 'superadmin', 'manager'), createCategory);
 
 router.route('/categories/:id')
-    .put(protect, authorize('admin', 'manager'), updateCategory)
-    .delete(protect, authorize('admin', 'manager'), deleteCategory);
+    .put(protect, authorize('admin', 'superadmin', 'manager'), updateCategory)
+    .delete(protect, authorize('admin', 'superadmin', 'manager'), deleteCategory);
 
 // Items
 router.route('/items')
     .get(getItems)
-    .post(protect, authorize('admin', 'manager'), createItem);
+    .post(protect, authorize('admin', 'superadmin', 'manager'), createItem);
 
 router.route('/items/:id')
-    .put(protect, authorize('admin', 'manager'), updateItem)
-    .delete(protect, authorize('admin', 'manager'), deleteItem);
+    .put(protect, authorize('admin', 'superadmin', 'manager'), updateItem)
+    .delete(protect, authorize('admin', 'superadmin', 'manager'), deleteItem);
 
-router.put('/items/:id/availability', protect, authorize('admin', 'manager'), toggleAvailability);
+router.put('/items/:id/availability', protect, authorize('admin', 'superadmin', 'manager'), toggleAvailability);
 
 export default router;

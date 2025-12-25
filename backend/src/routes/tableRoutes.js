@@ -5,15 +5,15 @@ import { protect, authorize } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.route('/')
-    .get(protect, authorize('admin', 'manager'), getTables)
-    .post(protect, authorize('admin', 'manager'), createTable);
+    .get(protect, authorize('admin', 'superadmin', 'manager'), getTables)
+    .post(protect, authorize('admin', 'superadmin', 'manager'), createTable);
 
 router.route('/:id')
-    .get(protect, authorize('admin', 'manager'), getTableById)
-    .put(protect, authorize('admin', 'manager'), updateTable)
-    .delete(protect, authorize('admin', 'manager'), deleteTable);
+    .get(protect, authorize('admin', 'superadmin', 'manager'), getTableById)
+    .put(protect, authorize('admin', 'superadmin', 'manager'), updateTable)
+    .delete(protect, authorize('admin', 'superadmin', 'manager'), deleteTable);
 
-router.get('/:id/qr', protect, authorize('admin', 'manager'), getTableQR);
-router.post('/:id/regenerate-qr', protect, authorize('admin', 'manager'), regenerateQR);
+router.get('/:id/qr', protect, authorize('admin', 'superadmin', 'manager'), getTableQR);
+router.post('/:id/regenerate-qr', protect, authorize('admin', 'superadmin', 'manager'), regenerateQR);
 
 export default router;
