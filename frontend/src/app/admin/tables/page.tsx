@@ -47,6 +47,7 @@ export default function TablesPage() {
     // Form states
     const [formTableNumber, setFormTableNumber] = useState('');
     const [formIsActive, setFormIsActive] = useState(true);
+    const [formCapacity, setFormCapacity] = useState(4);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -71,10 +72,14 @@ export default function TablesPage() {
         try {
             await request('/tables', {
                 method: 'POST',
-                body: JSON.stringify({ tableNumber: formTableNumber }),
+                body: JSON.stringify({
+                    tableNumber: formTableNumber,
+                    capacity: formCapacity
+                }),
             });
             setIsAddModalOpen(false);
             setFormTableNumber('');
+            setFormCapacity(4);
             fetchTables();
         } catch (error) {
             alert(error instanceof Error ? error.message : 'Failed to add table');
@@ -92,7 +97,8 @@ export default function TablesPage() {
                 method: 'PUT',
                 body: JSON.stringify({
                     tableNumber: formTableNumber,
-                    isActive: formIsActive
+                    isActive: formIsActive,
+                    capacity: formCapacity
                 }),
             });
             setIsEditModalOpen(false);
@@ -237,6 +243,7 @@ export default function TablesPage() {
                                                         setSelectedTable(table);
                                                         setFormTableNumber(table.tableNumber);
                                                         setFormIsActive(table.isActive);
+                                                        setFormCapacity(table.capacity || 4);
                                                         setIsEditModalOpen(true);
                                                     }}
                                                     className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-secondary text-sm transition-colors"
@@ -390,6 +397,17 @@ export default function TablesPage() {
                                             className="w-full bg-secondary/50 border border-border rounded-xl py-3 px-4 outline-none focus:border-primary transition-all font-bold"
                                         />
                                     </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-muted-foreground px-1 tracking-widest">Seating Capacity</label>
+                                        <input
+                                            type="number"
+                                            value={formCapacity}
+                                            onChange={(e) => setFormCapacity(parseInt(e.target.value))}
+                                            min="1"
+                                            required
+                                            className="w-full bg-secondary/50 border border-border rounded-xl py-3 px-4 outline-none focus:border-primary transition-all font-bold"
+                                        />
+                                    </div>
                                     <div className="flex gap-3">
                                         <button
                                             type="button"
@@ -442,6 +460,17 @@ export default function TablesPage() {
                                             type="text"
                                             value={formTableNumber}
                                             onChange={(e) => setFormTableNumber(e.target.value)}
+                                            required
+                                            className="w-full bg-secondary/50 border border-border rounded-xl py-3 px-4 outline-none focus:border-primary transition-all font-bold"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-muted-foreground px-1 tracking-widest">Seating Capacity</label>
+                                        <input
+                                            type="number"
+                                            value={formCapacity}
+                                            onChange={(e) => setFormCapacity(parseInt(e.target.value))}
+                                            min="1"
                                             required
                                             className="w-full bg-secondary/50 border border-border rounded-xl py-3 px-4 outline-none focus:border-primary transition-all font-bold"
                                         />

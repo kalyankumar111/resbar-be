@@ -14,6 +14,15 @@ const tableSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
+    status: {
+        type: String,
+        enum: ['available', 'occupied', 'dirty', 'reserved'],
+        default: 'available',
+    },
+    capacity: {
+        type: Number,
+        default: 4,
+    },
 }, {
     timestamps: true,
 });

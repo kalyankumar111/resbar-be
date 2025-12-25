@@ -9,6 +9,16 @@ const orderItemSchema = new mongoose.Schema({
         ref: 'Menu.items',
         required: true,
     },
+    status: {
+        type: String,
+        required: true,
+        enum: ['pending', 'preparing', 'ready', 'served', 'paid', 'cancelled'],
+        default: 'pending',
+    },
+    firedAt: {
+        type: Date,
+        default: Date.now,
+    },
 });
 
 const orderSchema = new mongoose.Schema({
@@ -25,7 +35,7 @@ const orderSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true,
-        enum: ['pending', 'preparing', 'served', 'paid', 'cancelled'],
+        enum: ['pending', 'preparing', 'ready', 'served', 'paid', 'cancelled'],
         default: 'pending',
     },
     totalAmount: {

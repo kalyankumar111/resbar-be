@@ -21,9 +21,14 @@ export const createTable = async (req, res) => {
     if (tableExists) {
         res.status(400).json({ message: 'Table already exists' });
     } else {
+        const { capacity } = req.body;
         // Generate initial QR token
         const qrToken = crypto.randomBytes(16).toString('hex');
-        const table = await Table.create({ tableNumber, qrToken });
+        const table = await Table.create({
+            tableNumber,
+            qrToken,
+            capacity: capacity || 4
+        });
         res.status(201).json(table);
     }
 };
@@ -50,6 +55,8 @@ export const updateTable = async (req, res) => {
     if (table) {
         table.tableNumber = req.body.tableNumber || table.tableNumber;
         table.isActive = req.body.isActive !== undefined ? req.body.isActive : table.isActive;
+        table.status = req.body.status || table.status;
+        table.capacity = req.body.capacity !== undefined ? req.body.capacity : table.capacity;
 
         const updatedTable = await table.save();
         res.json(updatedTable);

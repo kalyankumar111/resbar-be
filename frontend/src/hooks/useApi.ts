@@ -1,12 +1,15 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export const useApi = () => {
-    const { token, logout } = useAuthStore();
-    const baseUrl = 'http://localhost:5000/api';
+    // Use selectors for stability
+    const token = useAuthStore((state) => state.token);
+    const logout = useAuthStore((state) => state.logout);
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-    const request = async (endpoint: string, options: RequestInit = {}) => {
+    const request = useCallback(async (endpoint: string, options: RequestInit = {}) => {
         const headers = {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -36,7 +39,7 @@ export const useApi = () => {
             console.error(`API Error [${endpoint}]:`, error);
             throw error;
         }
-    };
+    }, [token, logout, baseUrl]);
 
     return { request };
 };
