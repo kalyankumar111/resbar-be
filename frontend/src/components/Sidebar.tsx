@@ -86,11 +86,19 @@ export const Sidebar = () => {
     const pathname = usePathname();
     const router = useRouter();
     const { user, logout } = useAuthStore();
-    const role = user?.role;
+    const [isHydrated, setIsHydrated] = React.useState(false);
 
-    const filteredItems = navItems.filter((item) =>
-        role ? item.roles.includes(role) : false
-    );
+    React.useEffect(() => {
+        setIsHydrated(true);
+    }, []);
+    const role = user?.role;
+    const roleString = typeof role === 'string' ? role : (role as any)?.name;
+
+    const filteredItems = navItems.filter((item) => {
+        if (!roleString) return false;
+        const normalizedRole = roleString.toLowerCase();
+        return item.roles.includes(normalizedRole as any);
+    });
 
     const handleLogout = () => {
         Cookies.remove('gastrohub_auth_status');
@@ -99,8 +107,10 @@ export const Sidebar = () => {
         router.push('/login');
     };
 
+    if (!isHydrated) return null;
+
     return (
-        <div className="h-screen w-64 bg-card border-r border-border flex flex-col fixed left-0 top-0 z-50">
+        <div className="h-screen w-64 bg-card/95 backdrop-blur-sm border-r-2 border-primary/10 flex flex-col fixed left-0 top-0 z-50">
             <div className="p-6">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">

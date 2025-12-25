@@ -42,18 +42,19 @@ export default function ChefDashboard() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
+    const [showHistory, setShowHistory] = useState(false);
 
     const fetchOrders = useCallback(async (showLoading = false) => {
         try {
             if (showLoading) setIsLoading(true);
-            const data = await request('/kitchen/orders');
+            const data = await request(`/kitchen/orders?history=${showHistory}`);
             setOrders(data);
         } catch (error) {
             console.error('Failed to fetch kitchen orders', error);
         } finally {
             if (showLoading) setIsLoading(false);
         }
-    }, [request]);
+    }, [request, showHistory]);
 
     useEffect(() => {
         fetchOrders(true);
@@ -66,12 +67,11 @@ export default function ChefDashboard() {
             setIsUpdating(orderId);
             await request(`/kitchen/orders/${orderId}/status`, {
                 method: 'PUT',
-                body: JSON.stringify({ status: newStatus, updateItems: true }), // Simple bulk update
+                body: JSON.stringify({ status: newStatus }), // No more bulk update
             });
             setOrders(prev => prev.map(o => o._id === orderId ? {
                 ...o,
-                status: newStatus as any,
-                items: o.items.map(i => ({ ...i, status: newStatus as any }))
+                status: newStatus as any
             } : o));
         } catch (error) {
             alert('Failed to update order status');
@@ -157,8 +157,24 @@ export default function ChefDashboard() {
                         <RefreshCw size={20} className={isLoading ? "animate-spin" : ""} />
                     </button>
                     <div className="flex bg-card/50 p-1 rounded-xl border border-border shadow-inner">
-                        <button className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-black uppercase tracking-wider shadow-lg shadow-primary/20">Active</button>
-                        <button className="px-5 py-2 rounded-lg text-muted-foreground text-xs font-black uppercase tracking-wider hover:text-foreground">History</button>
+                        <button
+                            onClick={() => setShowHistory(false)}
+                            className={cn(
+                                "px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all",
+                                !showHistory ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Active
+                        </button>
+                        <button
+                            onClick={() => setShowHistory(true)}
+                            className={cn(
+                                "px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all",
+                                showHistory ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            History
+                        </button>
                     </div>
                 </div>
             </div>
@@ -268,25 +284,41 @@ export default function ChefDashboard() {
 
                                     <div className="p-5 pt-0">
                                         <div className="relative group/status">
-                                            <select
-                                                disabled={isUpdating?.includes(order._id)}
-                                                value={order.status}
-                                                onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
-                                                className={cn(
-                                                    "w-full py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-widest appearance-none transition-all shadow-lg active:scale-95 disabled:opacity-50 cursor-pointer outline-none border-2",
-                                                    order.status === 'ready'
-                                                        ? "bg-emerald-500 text-white shadow-emerald-500/20 border-emerald-400"
-                                                        : order.status === 'preparing'
-                                                            ? "bg-orange-500 text-white shadow-orange-500/20 border-orange-400"
-                                                            : "bg-primary text-white shadow-primary/20 border-primary-400"
-                                                )}
-                                            >
-                                                <option value="pending" className="bg-card text-foreground">Pending</option>
-                                                <option value="preparing" className="bg-card text-foreground">Preparing</option>
-                                                <option value="ready" className="bg-card text-foreground">Ready</option>
-                                                <option value="served" className="bg-card text-foreground">Served</option>
-                                                <option value="cancelled" className="bg-card text-foreground">Cancelled</option>
-                                            </select>
+                                            {(() => {
+                                                const canBeServed = order.items.every(item =>
+                                                    ['ready', 'served', 'cancelled'].includes(item.status)
+                                                );
+                                                return (
+                                                    <select
+                                                        disabled={isUpdating?.includes(order._id)}
+                                                        value={order.status}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val === 'served' && !canBeServed) {
+                                                                alert('Please ensure all items are Ready or Served first.');
+                                                                return;
+                                                            }
+                                                            handleStatusUpdate(order._id, val);
+                                                        }}
+                                                        className={cn(
+                                                            "w-full py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-widest appearance-none transition-all shadow-lg active:scale-95 disabled:opacity-50 cursor-pointer outline-none border-2",
+                                                            order.status === 'ready'
+                                                                ? "bg-emerald-500 text-white shadow-emerald-500/20 border-emerald-400"
+                                                                : order.status === 'preparing'
+                                                                    ? "bg-orange-500 text-white shadow-orange-500/20 border-orange-400"
+                                                                    : "bg-primary text-white shadow-primary/20 border-primary-400"
+                                                        )}
+                                                    >
+                                                        <option value="pending" className="bg-card text-foreground">Pending</option>
+                                                        <option value="preparing" className="bg-card text-foreground">Preparing</option>
+                                                        <option value="ready" className="bg-card text-foreground">Ready</option>
+                                                        <option value="served" className={cn("bg-card text-foreground", !canBeServed && "opacity-50")} disabled={!canBeServed}>
+                                                            Served {!canBeServed && "(Items in Prep)"}
+                                                        </option>
+                                                        <option value="cancelled" className="bg-card text-foreground">Cancelled</option>
+                                                    </select>
+                                                );
+                                            })()}
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/60">
                                                 {isUpdating === order._id ? (
                                                     <RefreshCw className="w-4 h-4 animate-spin" />

@@ -4,9 +4,14 @@ import mongoose from 'mongoose';
 // @desc    Get active/kitchen orders (preparing, ready, etc)
 // @route   GET /api/kitchen/orders
 export const getKitchenOrders = async (req, res) => {
+    const { history } = req.query;
+    const statuses = history === 'true'
+        ? ['served', 'paid', 'cancelled']
+        : ['pending', 'preparing', 'ready'];
+
     const orders = await Order.find({
-        status: { $in: ['pending', 'preparing', 'ready'] }
-    }).populate('tableId');
+        status: { $in: statuses }
+    }).sort({ createdAt: history === 'true' ? -1 : 1 }).populate('tableId');
     res.json(orders);
 };
 
@@ -48,13 +53,14 @@ export const updateKitchenItemStatus = async (req, res) => {
             // Recompute order status based on all items
             const itemStatuses = order.items.map(i => i.status);
 
-            const allReady = itemStatuses.every(s => s === 'ready' || s === 'cancelled' || s === 'served');
+            const allServed = itemStatuses.every(s => s === 'served' || s === 'cancelled');
+            const allReadyOrServed = itemStatuses.every(s => s === 'ready' || s === 'served' || s === 'cancelled');
             const anyPreparing = itemStatuses.some(s => s === 'preparing');
             const allCancelled = itemStatuses.every(s => s === 'cancelled');
 
             if (allCancelled) {
                 order.status = 'cancelled';
-            } else if (allReady) {
+            } else if (allServed || allReadyOrServed) {
                 order.status = 'ready';
             } else if (anyPreparing) {
                 order.status = 'preparing';

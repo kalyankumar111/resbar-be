@@ -21,13 +21,14 @@ export default function RootLayout({
   const pathname = usePathname();
   const { user, isAuthenticated } = useAuthStore();
   const isLoginPage = pathname === '/login';
+  const showResponsiveSidebar = isAuthenticated && !isLoginPage;
 
   return (
     <html lang="en" className="dark">
       <body className={cn(inter.className, "bg-background min-h-screen")}>
-        {!isLoginPage && <Sidebar />}
-        <main className={cn("min-h-screen", !isLoginPage && "pl-64")}>
-          {!isLoginPage && (
+        {showResponsiveSidebar && <Sidebar />}
+        <main className={cn("min-h-screen", showResponsiveSidebar && "pl-64")}>
+          {showResponsiveSidebar && (
             <header className="h-16 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-40 px-8 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-medium text-muted-foreground italic">Welcome back, {user?.name || 'User'}</h2>

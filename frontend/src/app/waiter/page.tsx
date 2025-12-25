@@ -12,9 +12,11 @@ import {
     X,
     Check,
     Search,
+    ChevronDown,
     ChevronRight,
     UtensilsCrossed,
-    Trash2
+    Trash2,
+    Receipt
 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { cn } from '@/lib/utils';
@@ -34,11 +36,19 @@ interface MenuItem {
     category: string;
 }
 
+interface OrderItem {
+    name: string;
+    quantity: number;
+    price: number;
+    status: string;
+}
+
 interface Order {
     _id: string;
     tableId: any;
     status: string;
     totalAmount: number;
+    items: OrderItem[];
 }
 
 export default function WaiterDashboard() {
@@ -54,6 +64,9 @@ export default function WaiterDashboard() {
     const [selectedTable, setSelectedTable] = useState<Table | null>(null);
     const [cart, setCart] = useState<{ item: MenuItem; quantity: number }[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [viewingBillOrder, setViewingBillOrder] = useState<any | null>(null);
+    const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+    const [isEditingOrder, setIsEditingOrder] = useState(false);
 
     const fetchData = useCallback(async (showLoading = false) => {
         try {
@@ -65,7 +78,7 @@ export default function WaiterDashboard() {
             ]);
             setTables(tablesData);
             setMenuItems(menuData);
-            setActiveOrders(ordersData.filter((o: any) => ['pending', 'preparing', 'ready'].includes(o.status)));
+            setActiveOrders(ordersData.filter((o: any) => ['pending', 'preparing', 'ready', 'served'].includes(o.status)));
         } catch (error) {
             console.error('Failed to fetch waiter data', error);
         } finally {
@@ -82,48 +95,91 @@ export default function WaiterDashboard() {
     const handleCreateTableOrder = async () => {
         if (!selectedTable || cart.length === 0) return;
 
+        const tableOrder = activeOrders.find(o =>
+            (typeof o.tableId === 'string' ? o.tableId : o.tableId?._id) === selectedTable._id
+        );
+
         try {
-            const totalAmount = cart.reduce((sum, i) => sum + i.item.price * i.quantity, 0);
-            const orderPayload = {
-                tableId: selectedTable._id,
-                items: cart.map(i => ({
-                    menuItemId: i.item._id,
-                    name: i.item.name,
-                    quantity: i.quantity,
-                    price: i.item.price,
-                    status: 'pending'
-                })),
-                totalAmount
-            };
+            if (isEditingOrder && tableOrder) {
+                // Update existing order
+                await request(`/orders/${tableOrder._id}/items`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        items: cart.map(i => ({
+                            menuItemId: i.item._id,
+                            name: i.item.name,
+                            quantity: i.quantity,
+                            price: i.item.price
+                        }))
+                    })
+                });
+            } else {
+                // Create new order
+                const totalAmount = cart.reduce((sum, i) => sum + i.item.price * i.quantity, 0);
+                const orderPayload = {
+                    tableId: selectedTable._id,
+                    items: cart.map(i => ({
+                        menuItemId: i.item._id,
+                        name: i.item.name,
+                        quantity: i.quantity,
+                        price: i.item.price,
+                        status: 'pending'
+                    })),
+                    totalAmount
+                };
 
-            await request('/orders', {
-                method: 'POST',
-                body: JSON.stringify(orderPayload),
-            });
+                await request('/orders', {
+                    method: 'POST',
+                    body: JSON.stringify(orderPayload),
+                });
 
-            // Update table status to occupied
-            await request(`/tables/${selectedTable._id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ status: 'occupied' }),
-            });
+                // Update table status to occupied
+                await handleUpdateTableStatus(selectedTable._id, 'occupied');
+            }
 
             setIsOrderModalOpen(false);
             setCart([]);
             fetchData();
         } catch (error) {
-            alert('Failed to create order');
+            alert('Failed to process order');
         }
     };
 
-    const handleUpdateTableStatus = async (tableId: string, newStatus: string) => {
+    const handleUpdateTableStatus = async (tableId: string, newStatus: string, orderId?: string) => {
+        if (newStatus === 'available' && !confirm('Are you sure the table is clean and ready for new guests?')) return;
+
         try {
             await request(`/tables/${tableId}`, {
                 method: 'PUT',
                 body: JSON.stringify({ status: newStatus }),
             });
+
+            if ((newStatus === 'dirty' || newStatus === 'available') && orderId) {
+                await request(`/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status: 'paid' }),
+                });
+            }
+
             setTables(prev => prev.map(t => t._id === tableId ? { ...t, status: newStatus as any } : t));
+            fetchData();
         } catch (error) {
             alert('Failed to update table status');
+        }
+    };
+
+    const handleGenerateBill = (order: any) => {
+        setViewingBillOrder(order);
+        setIsBillModalOpen(true);
+    };
+
+    const handleFinalizePayment = async (orderId: string, tableId: string) => {
+        if (!confirm('Mark as paid and clear table?')) return;
+        try {
+            await handleUpdateTableStatus(tableId, 'dirty', orderId);
+            setIsBillModalOpen(false);
+        } catch (error) {
+            alert('Failed to finalize payment');
         }
     };
 
@@ -240,17 +296,52 @@ export default function WaiterDashboard() {
                                     </div>
 
                                     {table.status === 'occupied' ? (
-                                        <div className="mt-4 pt-4 border-t border-primary/10">
-                                            <div className="flex justify-between items-center mb-4">
+                                        <div className="mt-4 pt-4 border-t border-primary/10 space-y-3">
+                                            {tableOrder?.items && (
+                                                <div className="px-1 py-1 bg-secondary/30 rounded-lg border border-border/50 max-h-16 overflow-y-auto custom-scrollbar">
+                                                    {tableOrder.items.map((item: any, idx: number) => (
+                                                        <div key={idx} className="flex justify-between text-[9px] font-bold py-0.5">
+                                                            <span className="truncate pr-2">{item.quantity}x {item.name}</span>
+                                                            <span className={cn(
+                                                                "shrink-0",
+                                                                item.status === 'served' ? "text-emerald-500" : "text-primary/60"
+                                                            )}>
+                                                                {item.status === 'served' ? 'Served' : '...'}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between items-center px-1">
                                                 <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">Active Bill</span>
                                                 <span className="text-lg font-black text-primary">${tableOrder?.totalAmount.toFixed(2) || '0.00'}</span>
                                             </div>
-                                            <button
-                                                onClick={() => handleUpdateTableStatus(table._id, 'dirty')}
-                                                className="w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
-                                            >
-                                                Mark for Clearing
-                                            </button>
+                                            <div className="relative group/actions">
+                                                <select
+                                                    defaultValue=""
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        if (val === 'bill') handleGenerateBill(tableOrder);
+                                                        if (val === 'add') {
+                                                            setSelectedTable(table);
+                                                            setIsEditingOrder(true);
+                                                            setCart([]);
+                                                            setIsOrderModalOpen(true);
+                                                        }
+                                                        if (val === 'clear') handleUpdateTableStatus(table._id, 'dirty', tableOrder?._id);
+                                                        e.target.value = ''; // Reset
+                                                    }}
+                                                    className="w-full py-2.5 px-4 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest rounded-xl transition-all appearance-none cursor-pointer outline-none border border-primary/20"
+                                                >
+                                                    <option value="" disabled>Table Actions</option>
+                                                    <option value="add" className="bg-card text-foreground">Add Items</option>
+                                                    <option value="bill" className="bg-card text-foreground">View/Generate Bill</option>
+                                                    <option value="clear" className="bg-card text-foreground">Clear Table</option>
+                                                </select>
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-60">
+                                                    <ChevronDown size={14} className="text-primary" />
+                                                </div>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="pt-8">
@@ -258,6 +349,7 @@ export default function WaiterDashboard() {
                                                 <button
                                                     onClick={() => {
                                                         setSelectedTable(table);
+                                                        setIsEditingOrder(false);
                                                         setIsOrderModalOpen(true);
                                                     }}
                                                     className="w-full py-3 rounded-2xl border-2 border-dashed border-border group-hover:border-primary/40 group-hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-xs font-black uppercase text-muted-foreground group-hover:text-primary"
@@ -267,8 +359,8 @@ export default function WaiterDashboard() {
                                                 </button>
                                             ) : (
                                                 <button
-                                                    onClick={() => handleUpdateTableStatus(table._id, 'available')}
-                                                    className="w-full py-3 rounded-2xl bg-secondary hover:bg-secondary/70 text-muted-foreground text-xs font-black uppercase tracking-widest transition-all"
+                                                    onClick={() => handleUpdateTableStatus(table._id, 'available', activeOrders.find(o => (typeof o.tableId === 'string' ? o.tableId : o.tableId?._id) === table._id)?._id)}
+                                                    className="w-full py-3 bg-secondary hover:bg-secondary/80 rounded-2xl border border-border transition-all flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-600"
                                                 >
                                                     Set Available
                                                 </button>
@@ -301,7 +393,9 @@ export default function WaiterDashboard() {
                             <div className="flex-1 flex flex-col p-8 border-r border-border min-h-0">
                                 <div className="flex items-center justify-between mb-6">
                                     <div>
-                                        <h3 className="text-2xl font-black">Table {selectedTable.tableNumber}</h3>
+                                        <h3 className="text-2xl font-black">
+                                            {isEditingOrder ? `Add to Table ${selectedTable.tableNumber}` : `New Order: Table ${selectedTable.tableNumber}`}
+                                        </h3>
                                         <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest mt-1">Select items for the order</p>
                                     </div>
                                     <div className="relative w-64">
@@ -341,10 +435,34 @@ export default function WaiterDashboard() {
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                                    {isEditingOrder && (
+                                        <div className="mb-6 space-y-2 opacity-60">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Already Ordered</p>
+                                            {activeOrders.find(o =>
+                                                (typeof o.tableId === 'string' ? o.tableId : o.tableId?._id) === selectedTable._id
+                                            )?.items.map((item, idx) => (
+                                                <div key={idx} className="flex justify-between items-center bg-secondary/40 p-3 rounded-xl border border-border/50">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold leading-tight">{item.name}</span>
+                                                        <span className="text-[10px] text-muted-foreground font-medium">Qty: {item.quantity} • {item.status}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <div className="h-px bg-border my-4" />
+                                        </div>
+                                    )}
+
+                                    {isEditingOrder && cart.length > 0 && (
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">New Additions</p>
+                                    )}
+
                                     {cart.length === 0 ? (
-                                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-30 italic">
+                                        <div className={cn(
+                                            "flex flex-col items-center justify-center text-muted-foreground opacity-30 italic",
+                                            isEditingOrder ? "py-8" : "h-full"
+                                        )}>
                                             <UtensilsCrossed size={48} className="mb-4" />
-                                            <p className="text-xs font-bold uppercase tracking-widest">No items selected</p>
+                                            <p className="text-xs font-bold uppercase tracking-widest">No new items selected</p>
                                         </div>
                                     ) : (
                                         cart.map(({ item, quantity }) => (
@@ -376,7 +494,7 @@ export default function WaiterDashboard() {
                                         onClick={handleCreateTableOrder}
                                         className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 disabled:opacity-50 disabled:shadow-none hover:bg-primary/90 transition-all active:scale-[0.98]"
                                     >
-                                        Place Order
+                                        {isEditingOrder ? 'Add to Current Items' : 'Place Order'}
                                     </button>
                                 </div>
                             </div>
@@ -387,6 +505,65 @@ export default function WaiterDashboard() {
                             >
                                 <X size={20} />
                             </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Bill Modal */}
+            <AnimatePresence>
+                {isBillModalOpen && viewingBillOrder && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setIsBillModalOpen(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="w-full max-w-md bg-card border border-border rounded-[3rem] shadow-2xl relative z-[101] overflow-hidden flex flex-col p-8"
+                        >
+                            <div className="flex flex-col items-center mb-8 pb-8 border-b border-border border-dashed">
+                                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-4">
+                                    <Receipt size={32} />
+                                </div>
+                                <h3 className="text-xl font-black uppercase tracking-widest">Table #{viewingBillOrder.tableId?.tableNumber || '??'}</h3>
+                                <p className="text-xs text-muted-foreground font-medium mt-1">Order #{viewingBillOrder._id.slice(-6)}</p>
+                            </div>
+
+                            <div className="flex-1 space-y-4 mb-8">
+                                {viewingBillOrder.items.map((item: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between items-center text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-black text-muted-foreground">{item.quantity}x</span>
+                                            <span className="font-bold">{item.name}</span>
+                                        </div>
+                                        <span className="font-mono font-bold">${(item.price * item.quantity).toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="pt-8 border-t border-border space-y-4">
+                                <div className="flex justify-between items-center text-lg font-black uppercase">
+                                    <span>Total Amount</span>
+                                    <span className="text-primary">${viewingBillOrder.totalAmount.toFixed(2)}</span>
+                                </div>
+                                <button
+                                    onClick={() => handleFinalizePayment(viewingBillOrder._id, viewingBillOrder.tableId?._id || viewingBillOrder.tableId)}
+                                    className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                >
+                                    <CircleDollarSign size={20} />
+                                    Mark Paid & Clear Table
+                                </button>
+                                <button
+                                    onClick={() => setIsBillModalOpen(false)}
+                                    className="w-full py-3 bg-secondary text-muted-foreground rounded-2xl font-black uppercase tracking-widest hover:bg-secondary/70 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
                         </motion.div>
                     </div>
                 )}
