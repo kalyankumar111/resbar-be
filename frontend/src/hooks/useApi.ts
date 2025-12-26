@@ -7,7 +7,7 @@ export const useApi = () => {
     // Use selectors for stability
     const token = useAuthStore((state) => state.token);
     const logout = useAuthStore((state) => state.logout);
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://resbar-be-w6dk.vercel.app/api';
 
     const request = useCallback(async (endpoint: string, options: RequestInit = {}) => {
         const headers = {
