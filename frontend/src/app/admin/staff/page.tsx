@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -261,7 +262,7 @@ export default function StaffPage() {
                         </div>
                         <h3 className="text-2xl font-bold">No team members found</h3>
                         <p className="text-muted-foreground mt-2 max-w-sm">
-                            We couldn't find any staff matching your search. Try adjusting your filters or add a new member.
+                            We couldn&apos;t find any staff matching your search. Try adjusting your filters or add a new member.
                         </p>
                     </div>
                 )}

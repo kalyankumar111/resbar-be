@@ -38,7 +38,7 @@ export default function LoginPage() {
                 localStorage.removeItem('gastrohub_remembered_email');
             }
 
-            const response = await fetch('http://localhost:5000/api/auth/login', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -60,6 +60,7 @@ export default function LoginPage() {
 
             login(user, token);
             router.push('/');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setError(err.message || 'Something went wrong');
         } finally {
