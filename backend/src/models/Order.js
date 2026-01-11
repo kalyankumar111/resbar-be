@@ -43,6 +43,14 @@ const orderSchema = new mongoose.Schema({
         required: true,
         default: 0.0,
     },
+    seatsAllocated: {
+        type: Number,
+        default: 0,
+    },
+    extraSeatsCharge: {
+        type: Number,
+        default: 0.0,
+    },
     items: [orderItemSchema],
 }, {
     timestamps: true,

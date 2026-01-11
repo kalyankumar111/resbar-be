@@ -60,7 +60,9 @@ export const updateKitchenItemStatus = async (req, res) => {
 
             if (allCancelled) {
                 order.status = 'cancelled';
-            } else if (allServed || allReadyOrServed) {
+            } else if (allServed) {
+                order.status = 'served';
+            } else if (allReadyOrServed) {
                 order.status = 'ready';
             } else if (anyPreparing) {
                 order.status = 'preparing';

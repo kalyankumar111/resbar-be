@@ -130,6 +130,7 @@ export default function ChefDashboard() {
             case 'ready': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
             case 'preparing': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
             case 'cancelled': return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
+            case 'served': return 'bg-emerald-500/20 text-emerald-600 border-emerald-500/40 opacity-70';
             default: return 'bg-secondary text-muted-foreground border-border';
         }
     };
@@ -271,6 +272,7 @@ export default function ChefDashboard() {
                                                             <option value="pending">Pending</option>
                                                             <option value="preparing">Preparing</option>
                                                             <option value="ready">Ready</option>
+                                                            <option value="served">Served</option>
                                                             <option value="cancelled">Cancelled</option>
                                                         </select>
                                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">

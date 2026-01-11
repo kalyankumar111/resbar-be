@@ -1,4 +1,6 @@
 import Order from '../models/Order.js';
+import Table from '../models/Table.js';
+import Settings from '../models/Settings.js';
 
 // @desc    Get all orders
 // @route   GET /api/orders
@@ -10,17 +12,50 @@ export const getOrders = async (req, res) => {
 // @desc    Create an order
 // @route   POST /api/orders
 export const createOrder = async (req, res) => {
-    const { tableId, items, totalAmount } = req.body;
+    const { tableId, items, totalAmount, seatsAllocated } = req.body;
 
-    const order = new Order({
-        tableId,
-        createdBy: req.user._id,
-        items,
-        totalAmount,
-    });
+    try {
+        // Get table to check capacity
+        const table = await Table.findById(tableId);
+        if (!table) {
+            return res.status(404).json({ message: 'Table not found' });
+        }
 
-    const createdOrder = await order.save();
-    res.status(201).json(createdOrder);
+        // Get settings for extra seat price
+        let settings = await Settings.findById('restaurant_settings');
+        if (!settings) {
+            settings = await Settings.create({
+                _id: 'restaurant_settings',
+                extraSeatPrice: 5.00,
+            });
+        }
+
+        // Calculate extra seats charge
+        let extraSeatsCharge = 0;
+        const seats = seatsAllocated || table.capacity;
+
+        if (seats > table.capacity) {
+            const extraSeats = seats - table.capacity;
+            extraSeatsCharge = extraSeats * settings.extraSeatPrice;
+        }
+
+        // Calculate final total
+        const finalTotal = totalAmount + extraSeatsCharge;
+
+        const order = new Order({
+            tableId,
+            createdBy: req.user._id,
+            items,
+            totalAmount: finalTotal,
+            seatsAllocated: seats,
+            extraSeatsCharge,
+        });
+
+        const createdOrder = await order.save();
+        res.status(201).json(createdOrder);
+    } catch (error) {
+        res.status(400).json({ message: 'Failed to create order', error: error.message });
+    }
 };
 
 // @desc    Get order by ID
