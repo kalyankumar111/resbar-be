@@ -24,7 +24,7 @@ const settingsSchema = new mongoose.Schema({
     },
     currency: {
         type: String,
-        default: 'USD',
+        default: 'INR',
     },
     // Singleton pattern - only one settings document
     _id: {

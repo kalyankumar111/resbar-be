@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -38,6 +36,10 @@ interface Category {
     items?: MenuItem[];
 }
 
+interface Settings {
+    currency: string;
+}
+
 export default function MenuPage() {
     const { request } = useApi();
     const [categories, setCategories] = useState<Category[]>([]);
@@ -46,6 +48,7 @@ export default function MenuPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [settings, setSettings] = useState<Settings | null>(null);
 
     // Modal states
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -68,15 +71,35 @@ export default function MenuPage() {
         fetchData();
     }, []);
 
+    const getCurrencySymbol = (currencyCode: string) => {
+        switch (currencyCode) {
+            case 'USD': return '$';
+            case 'EUR': return '€';
+            case 'GBP': return '£';
+            case 'INR': return '₹';
+            default: return '$';
+        }
+    };
+
+    const formatCurrency = (amount: number) => {
+        if (!settings) return `$${amount.toFixed(2)}`; // Fallback
+        const symbol = getCurrencySymbol(settings.currency);
+        return `${symbol}${amount.toFixed(2)}`;
+    };
+
+    const currencySymbol = settings ? getCurrencySymbol(settings.currency) : '$';
+
     const fetchData = async () => {
         try {
             setIsLoading(true);
-            const [catsData, itemsData] = await Promise.all([
+            const [catsData, itemsData, settingsData] = await Promise.all([
                 request('/menu/categories'),
-                request('/menu/items')
+                request('/menu/items'),
+                request('/settings')
             ]);
             setCategories(catsData);
             setItems(itemsData);
+            setSettings(settingsData);
         } catch (error) {
             console.error('Failed to fetch menu data', error);
         } finally {
@@ -284,7 +307,7 @@ export default function MenuPage() {
                                         <div className="flex justify-between items-start mb-2">
                                             <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">{item.name}</h3>
                                             <div className="flex bg-primary/10 px-2 py-1 rounded-lg text-primary font-black text-sm">
-                                                ${item.price.toFixed(2)}
+                                                {formatCurrency(item.price)}
                                             </div>
                                         </div>
                                         <p className="text-xs text-muted-foreground line-clamp-2 mb-6 flex-1 italic">
@@ -483,7 +506,7 @@ export default function MenuPage() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-muted-foreground px-1 tracking-widest">Price ($)</label>
+                                            <label className="text-[10px] font-black uppercase text-muted-foreground px-1 tracking-widest">Price ({currencySymbol})</label>
                                             <input
                                                 type="number"
                                                 step="0.01"

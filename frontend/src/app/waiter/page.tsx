@@ -76,6 +76,23 @@ export default function WaiterDashboard() {
     const [seatsAllocated, setSeatsAllocated] = useState<number>(0);
     const [settings, setSettings] = useState<any>(null);
 
+    const getCurrencySymbol = (currencyCode: string) => {
+        switch (currencyCode) {
+            case 'USD': return '$';
+            case 'EUR': return '€';
+            case 'GBP': return '£';
+            case 'INR': return '₹';
+            // Add more as needed
+            default: return '$';
+        }
+    };
+
+    const formatCurrency = (amount: number) => {
+        if (!settings) return `$${amount.toFixed(2)}`; // Fallback
+        const symbol = getCurrencySymbol(settings.currency);
+        return `${symbol}${amount.toFixed(2)}`;
+    };
+
     const fetchData = useCallback(async (showLoading = false) => {
         try {
             if (showLoading) setIsLoading(true);
@@ -408,7 +425,7 @@ export default function WaiterDashboard() {
                                                     )}
                                                     <div className="flex justify-between items-center px-1">
                                                         <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">Active Bill</span>
-                                                        <span className="text-lg font-black text-primary">${tableOrder?.totalAmount.toFixed(2) || '0.00'}</span>
+                                                        <span className="text-lg font-black text-primary">{formatCurrency(tableOrder?.totalAmount || 0)}</span>
                                                     </div>
                                                     <div className="relative">
                                                         <select
@@ -841,13 +858,13 @@ export default function WaiterDashboard() {
                                             <span className="font-black text-muted-foreground">{item.quantity}x</span>
                                             <span className="font-bold">{item.name}</span>
                                         </div>
-                                        <span className="font-mono font-bold">${(item.price * item.quantity).toFixed(2)}</span>
+                                        <span className="font-mono font-bold">{formatCurrency(item.price * item.quantity)}</span>
                                     </div>
                                 ))}
                                 {viewingBillOrder.extraSeatsCharge > 0 && (
                                     <div className="flex justify-between items-center text-sm pt-3 border-t border-border/50">
                                         <span className="font-bold text-orange-500">Extra Seats Charge</span>
-                                        <span className="font-mono font-bold text-orange-500">${viewingBillOrder.extraSeatsCharge.toFixed(2)}</span>
+                                        <span className="font-mono font-bold text-orange-500">{formatCurrency(viewingBillOrder.extraSeatsCharge)}</span>
                                     </div>
                                 )}
                             </div>
@@ -855,7 +872,7 @@ export default function WaiterDashboard() {
                             <div className="pt-8 border-t border-border space-y-4">
                                 <div className="flex justify-between items-center text-lg font-black uppercase">
                                     <span>Total Amount</span>
-                                    <span className="text-primary">${viewingBillOrder.totalAmount.toFixed(2)}</span>
+                                    <span className="text-primary">{formatCurrency(viewingBillOrder.totalAmount)}</span>
                                 </div>
                                 <button
                                     onClick={() => handleFinalizePayment(viewingBillOrder._id, viewingBillOrder.tableId?._id || viewingBillOrder.tableId)}

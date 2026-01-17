@@ -92,12 +92,11 @@ export const Sidebar = () => {
         setIsHydrated(true);
     }, []);
     const role = user?.role;
-    const roleString = typeof role === 'string' ? role : (role as any)?.name;
+    const roleString = role ? role.toLowerCase() : undefined;
 
     const filteredItems = navItems.filter((item) => {
         if (!roleString) return false;
-        const normalizedRole = roleString.toLowerCase();
-        return item.roles.includes(normalizedRole as any);
+        return item.roles.includes(roleString as UserRole);
     });
 
     const handleLogout = () => {

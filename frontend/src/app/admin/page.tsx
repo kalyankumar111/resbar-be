@@ -1,6 +1,4 @@
-'use client';
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     TrendingUp,
     Users,
@@ -11,8 +9,41 @@ import {
 } from 'lucide-react';
 import { StatCard } from '@/components/StatCard';
 import { motion } from 'framer-motion';
+import { useApi } from '@/hooks/useApi';
+
+interface Settings {
+    currency: string;
+    // Add other settings properties if needed
+}
 
 export default function AdminDashboard() {
+    const { request } = useApi();
+    const [settings, setSettings] = useState<Settings | null>(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const settingsData = await request('/settings');
+                setSettings(settingsData);
+            } catch (error) {
+                console.error('Failed to fetch settings', error);
+            }
+        };
+        fetchSettings();
+    }, [request]);
+
+    const getCurrencySymbol = (currencyCode: string) => {
+        switch (currencyCode) {
+            case 'USD': return '$';
+            case 'EUR': return '€';
+            case 'GBP': return '£';
+            case 'INR': return '₹';
+            default: return '$';
+        }
+    };
+
+    const currencySymbol = settings ? getCurrencySymbol(settings.currency) : '$';
+
     return (
         <div className="space-y-8">
             <div className="flex justify-between items-end">
@@ -33,7 +64,8 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="Total Revenue"
-                    value="$12,845.00"
+                    rawAmount={12845.00}
+                    currencySymbol={currencySymbol}
                     icon={DollarSign}
                     trend={{ value: "+12.5%", positive: true }}
                     delay={0.1}
@@ -83,7 +115,7 @@ export default function AdminDashboard() {
                                     <p className="text-xs text-muted-foreground">Kitchen station 2 • 5 mins ago</p>
                                 </div>
                                 <div className="text-right font-medium text-sm">
-                                    $45.00
+                                    {currencySymbol}45.00
                                 </div>
                             </div>
                         ))}

@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils';
 
 interface StatCardProps {
     title: string;
-    value: string | number;
+    rawAmount?: number; // Make optional for non-currency stats
+    value?: string; // Keep for non-currency stats like "24 min"
     icon: LucideIcon;
     trend?: {
         value: string;
@@ -15,9 +16,11 @@ interface StatCardProps {
     };
     className?: string;
     delay?: number;
+    currencySymbol?: string; // New prop for currency symbol
 }
 
-export const StatCard = ({ title, value, icon: Icon, trend, className, delay = 0 }: StatCardProps) => {
+export const StatCard = ({ title, rawAmount, value, icon: Icon, trend, className, delay = 0, currencySymbol = '$' }: StatCardProps) => {
+    const displayValue = rawAmount !== undefined ? `${currencySymbol}${rawAmount.toFixed(2)}` : value;
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -46,7 +49,7 @@ export const StatCard = ({ title, value, icon: Icon, trend, className, delay = 0
 
             <div>
                 <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
-                <p className="text-2xl font-bold mt-1 tracking-tight">{value}</p>
+                <p className="text-2xl font-bold mt-1 tracking-tight">{displayValue}</p>
             </div>
         </motion.div>
     );

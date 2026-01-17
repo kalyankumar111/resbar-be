@@ -35,9 +35,13 @@ export const useApi = () => {
             }
 
             return data;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(`API Error [${endpoint}]:`, error);
-            throw error;
+            if (error instanceof Error) {
+                throw error;
+            } else {
+                throw new Error(String(error));
+            }
         }
     }, [token, logout, baseUrl]);
 
